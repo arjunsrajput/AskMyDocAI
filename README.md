@@ -214,5 +214,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## 👨‍💻 Author
 
 **Arjun Singh Panwar**  
-- GitHub: [@yourusername](https://github.com/arjunsrajput)
-- LinkedIn: [linkedin.com/in/yourprofile](https://linkedin.com/in/arjun-s-rajput)
+- GitHub: [@arjunsrajput](https://github.com/arjunsrajput)
+- LinkedIn: [linkedin.com/in/arjun-s-rajput](https://linkedin.com/in/arjun-s-rajput)
