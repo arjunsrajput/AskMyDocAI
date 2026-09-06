@@ -1,6 +1,7 @@
 import os
+import shutil
+import tempfile
 import streamlit as st
-from src.config import UPLOAD_DIRECTORY
 from src.document_loader import MultiFormatDocumentLoader
 from src.text_splitter import DocumentSplitter
 from src.vector_store import VectorStoreManager
@@ -9,12 +10,17 @@ from src.rag_engine import RAGEngine
 # Set Streamlit Page Config
 st.set_page_config(page_title="AskMyDoc AI", page_icon="📄", layout="wide")
 
-# Ensure upload directory exists
-os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
+# Create a unique, private database folder for THIS specific user session
+if "session_dir" not in st.session_state:
+    st.session_state.session_dir = tempfile.mkdtemp(prefix="askmydoc_")
+    st.session_state.upload_dir = os.path.join(st.session_state.session_dir, "uploads")
+    st.session_state.chroma_dir = os.path.join(st.session_state.session_dir, "chroma_db")
+    os.makedirs(st.session_state.upload_dir, exist_ok=True)
+    os.makedirs(st.session_state.chroma_dir, exist_ok=True)
 
-# Initialize Core Services in Session State
+# Initialize Session-Isolated Services
 if "vector_manager" not in st.session_state:
-    st.session_state.vector_manager = VectorStoreManager()
+    st.session_state.vector_manager = VectorStoreManager(persist_dir=st.session_state.chroma_dir)
 if "rag_engine" not in st.session_state:
     st.session_state.rag_engine = RAGEngine(st.session_state.vector_manager)
 if "splitter" not in st.session_state:
@@ -41,7 +47,7 @@ with st.sidebar:
             with st.spinner("Processing documents into vector store..."):
                 all_chunks = []
                 for file in uploaded_files:
-                    file_path = os.path.join(UPLOAD_DIRECTORY, file.name)
+                    file_path = os.path.join(st.session_state.upload_dir, file.name)
                     with open(file_path, "wb") as f:
                         f.write(file.getbuffer())
 
@@ -65,9 +71,6 @@ with st.sidebar:
     indexed_sources = st.session_state.vector_manager.list_sources()
     if indexed_sources:
         for doc in indexed_sources:
-            st.write(f"📄 `{doc}`")
-    elif st.session_state.processed_files:
-        for doc in st.session_state.processed_files:
             st.write(f"📄 `{doc}`")
     else:
         st.caption("No documents indexed yet.")
