@@ -1,12 +1,18 @@
 # 📄 AskMyDoc AI — Decoupled Multi-Document RAG Microservice
 
 <p align="center">
+  <a href="https://askmydoc-ai.streamlit.app" target="_blank">
+    <img src="https://img.shields.io/badge/🚀_Live_Demo-AskMyDoc_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Live Demo" />
+  </a>
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
   <img src="https://img.shields.io/badge/LangChain-0.3%2B-1C3C3C?style=for-the-badge" alt="LangChain" />
   <img src="https://img.shields.io/badge/ChromaDB-Vector_Store-FF6F00?style=for-the-badge" alt="ChromaDB" />
   <img src="https://img.shields.io/badge/Google_Gemini-3.6_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Google Gemini" />
-  <img src="https://img.shields.io/badge/Streamlit-UI-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit" />
+</p>
+
+<p align="center">
+  <a href="https://askmydoc-ai.streamlit.app">👉 <b>Click Here to Launch the Live Web App</b> 👈</a>
 </p>
 
 ---
@@ -24,7 +30,7 @@ It allows users to ingest complex, multi-format documents (PDFs, Word documents,
 ```
                        ┌──────────────────────────────────────────────┐
                        │          Streamlit Web Client (UI)           │
-                       │           (Running on Port 8501)             │
+                       │         https://askmydoc-ai.streamlit.app    │
                        └──────────────────────┬───────────────────────┘
                                               │ HTTP JSON Requests
                                               ▼
@@ -45,6 +51,7 @@ It allows users to ingest complex, multi-format documents (PDFs, Word documents,
 ## ✨ Key Features
 
 - **🚀 Decoupled Microservice Architecture**: The FastAPI AI backend is completely decoupled from the Streamlit frontend, exposing standard REST API endpoints suitable for any web/mobile client.
+- **🌐 Live Cloud Deployment**: Fully deployed and accessible online at [askmydoc-ai.streamlit.app](https://askmydoc-ai.streamlit.app).
 - **📑 Multi-Format Parsing**: Unified ingestion pipeline supporting `.pdf`, `.docx`, `.txt`, and `.md` formats with automated metadata enrichment (filename, 1-based page numbers).
 - **🧩 Smart Semantic Chunking**: Implements `RecursiveCharacterTextSplitter` (1500 character window with 300 character overlap) preventing contextual fragmentation across headings and body sections.
 - **⚡ Local HuggingFace Embeddings**: Vectorizes text using `sentence-transformers/all-MiniLM-L6-v2` locally on CPU/GPU with **zero API costs**, zero rate limits, and ultra-low embedding latency.
@@ -58,20 +65,20 @@ It allows users to ingest complex, multi-format documents (PDFs, Word documents,
 
 | Layer | Technology | Purpose |
 |---|---|---|
+| **Frontend Web App** | **Streamlit Cloud** | Multi-turn chat interface, document uploader, expandable citation cards |
 | **Backend Framework** | **FastAPI** | High-performance asynchronous REST API, CORS middleware, Pydantic validation |
 | **Web Server** | **Uvicorn** | ASGI server for asynchronous request handling |
 | **RAG Orchestration** | **LangChain (LCEL)** | Document loaders, recursive text splitters, runnable prompt chains |
 | **Embeddings** | **HuggingFace (`all-MiniLM-L6-v2`)** | 384-dimensional dense semantic vectors (runs locally) |
 | **Vector Database** | **ChromaDB** | Vector similarity search using HNSW indexing |
 | **LLM Inference** | **Google Gemini (`gemini-3.6-flash`)** | Context synthesis, reasoning, and citation formatting |
-| **Frontend UI** | **Streamlit** | Multi-turn chat interface, document uploader, expandable citation cards |
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-AskMyDoc-RAG/
+AskMyDocAI/
 ├── .env.example          # Template for environment variables
 ├── requirements.txt      # Python package dependencies
 ├── main.py               # FastAPI backend microservice application
@@ -100,8 +107,8 @@ AskMyDoc-RAG/
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/askmydoc-rag.git
-cd askmydoc-rag
+git clone https://github.com/arjunsrajput/AskMyDocAI.git
+cd AskMyDocAI
 
 # Create and activate virtual environment
 python3 -m venv venv
@@ -214,5 +221,6 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## 👨‍💻 Author
 
 **Arjun Singh Panwar**  
-- GitHub: [@arjunsrajput](https://github.com/arjunsrajput)
-- LinkedIn: [linkedin.com/in/arjun-s-rajput](https://linkedin.com/in/arjun-s-rajput)
+- **Live Demo:** [https://askmydoc-ai.streamlit.app](https://askmydoc-ai.streamlit.app)
+- **GitHub:** [@arjunsrajput](https://github.com/arjunsrajput)
+- **LinkedIn:** [linkedin.com/in/arjun-s-rajput](https://linkedin.com/in/arjun-s-rajput)
