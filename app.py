@@ -1,75 +1,92 @@
+import os
 import streamlit as st
-import requests
-from src.config import FASTAPI_BACKEND_URL
+from src.config import UPLOAD_DIRECTORY
+from src.document_loader import MultiFormatDocumentLoader
+from src.text_splitter import DocumentSplitter
+from src.vector_store import VectorStoreManager
+from src.rag_engine import RAGEngine
 
+# Set Streamlit Page Config
 st.set_page_config(page_title="AskMyDoc AI", page_icon="📄", layout="wide")
 
-# Initialize Session State
+# Ensure upload directory exists
+os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
+
+# Initialize Core Services in Session State
+if "vector_manager" not in st.session_state:
+    st.session_state.vector_manager = VectorStoreManager()
+if "rag_engine" not in st.session_state:
+    st.session_state.rag_engine = RAGEngine(st.session_state.vector_manager)
+if "splitter" not in st.session_state:
+    st.session_state.splitter = DocumentSplitter()
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "processed_files" not in st.session_state:
+    st.session_state.processed_files = []
 
-# --- SIDEBAR ---
+# --- SIDEBAR: Document Management ---
 with st.sidebar:
-    st.title("📄 AskMyDoc AI")
-    st.caption("Ask anything across your documents with exact page-level citations.")
+    st.title("📄 AskMyDoc Control")
+    st.caption("Multi-Document RAG with Page Citations")
 
-    # Upload Section
+    # File Upload Widget
     uploaded_files = st.file_uploader(
         "Upload Documents",
         type=["pdf", "docx", "txt", "md"],
         accept_multiple_files=True
     )
 
-    if st.button("📤 Upload & Index to API", type="primary"):
+    if st.button("📤 Process & Index Documents", type="primary"):
         if uploaded_files:
-            with st.spinner("Sending documents to FastAPI backend..."):
-                files_payload = [("files", (f.name, f.getvalue(), f.type)) for f in uploaded_files]
-                try:
-                    res = requests.post(f"{FASTAPI_BACKEND_URL}/api/v1/upload", files=files_payload)
-                    if res.status_code == 200:
-                        data = res.json()
-                        st.success(f"✅ {data['message']}")
-                    else:
-                        st.error(f"Error {res.status_code}: {res.text}")
-                except Exception as e:
-                    st.error(f"Failed to connect to FastAPI backend: {e}")
+            with st.spinner("Processing documents into vector store..."):
+                all_chunks = []
+                for file in uploaded_files:
+                    file_path = os.path.join(UPLOAD_DIRECTORY, file.name)
+                    with open(file_path, "wb") as f:
+                        f.write(file.getbuffer())
+
+                    # Parse and Chunk
+                    docs = MultiFormatDocumentLoader.load_file(file_path)
+                    chunks = st.session_state.splitter.split_documents(docs)
+                    all_chunks.extend(chunks)
+                    if file.name not in st.session_state.processed_files:
+                        st.session_state.processed_files.append(file.name)
+
+                # Store Embeddings in ChromaDB
+                st.session_state.vector_manager.add_documents(all_chunks)
+                st.success(f"✅ Indexed {len(all_chunks)} chunks from {len(uploaded_files)} file(s)!")
         else:
-            st.warning("Please select files first.")
+            st.warning("Please upload at least one file first.")
 
     st.divider()
 
-    # View Indexed Docs
+    # List Indexed Documents
     st.subheader("📚 Indexed Documents")
-    try:
-        docs_res = requests.get(f"{FASTAPI_BACKEND_URL}/api/v1/documents")
-        if docs_res.status_code == 200:
-            docs = docs_res.json().get("documents", [])
-            if docs:
-                for doc in docs:
-                    st.write(f"📄 `{doc}`")
-            else:
-                st.caption("No documents indexed yet.")
-    except Exception:
-        st.caption("Backend offline. Please start FastAPI.")
+    indexed_sources = st.session_state.vector_manager.list_sources()
+    if indexed_sources:
+        for doc in indexed_sources:
+            st.write(f"📄 `{doc}`")
+    elif st.session_state.processed_files:
+        for doc in st.session_state.processed_files:
+            st.write(f"📄 `{doc}`")
+    else:
+        st.caption("No documents indexed yet.")
 
     st.divider()
 
-    # Reset DB Button
-    if st.button("🗑️ Reset Vector DB"):
-        try:
-            res = requests.delete(f"{FASTAPI_BACKEND_URL}/api/v1/reset")
-            if res.status_code == 200:
-                st.session_state.messages = []
-                st.success("Vector database reset!")
-                st.rerun()
-        except Exception as e:
-            st.error(f"Error: {e}")
+    # Reset DB
+    if st.button("🗑️ Reset Vector Database"):
+        st.session_state.vector_manager.clear_database()
+        st.session_state.processed_files = []
+        st.session_state.messages = []
+        st.success("Vector database reset!")
+        st.rerun()
 
 # --- MAIN CHAT INTERFACE ---
-st.title("Multi-Document Research Copilot")
-st.caption("Powered by **FastAPI**, **LangChain**, **ChromaDB**, and **Google Gemini**.")
+st.title("📄 AskMyDoc AI")
+st.caption("Ask questions across your documents with exact page-level citations.")
 
-# Display Chat History
+# Render Chat History
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -80,38 +97,31 @@ for msg in st.session_state.messages:
                     st.caption(src["snippet"])
                     st.divider()
 
-# User Input
+# Handle User Input
 if prompt := st.chat_input("Ask a question about your uploaded documents..."):
+    # Append user question
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Generate RAG response
     with st.chat_message("assistant"):
-        with st.spinner("FastAPI is retrieving context and generating answer..."):
-            try:
-                response = requests.post(
-                    f"{FASTAPI_BACKEND_URL}/api/v1/query",
-                    json={"query": prompt, "top_k": 4}
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    answer = data["answer"]
-                    sources = data["sources"]
+        with st.spinner("Retrieving context & generating answer..."):
+            result = st.session_state.rag_engine.answer_query(prompt, top_k=6)
+            answer = result["answer"]
+            sources = result["sources"]
 
-                    st.markdown(answer)
-                    if sources:
-                        with st.expander("🔍 View Retrieved Sources"):
-                            for idx, src in enumerate(sources, 1):
-                                st.markdown(f"**[{idx}] {src['file']} (Page {src['page']})**")
-                                st.caption(src["snippet"])
-                                st.divider()
+            st.markdown(answer)
+            if sources:
+                with st.expander("🔍 View Retrieved Sources"):
+                    for idx, src in enumerate(sources, 1):
+                        st.markdown(f"**[{idx}] {src['file']} (Page {src['page']})**")
+                        st.caption(src["snippet"])
+                        st.divider()
 
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": answer,
-                        "sources": sources
-                    })
-                else:
-                    st.error(f"Backend error: {response.status_code} - {response.text}")
-            except Exception as e:
-                st.error(f"Could not connect to FastAPI backend at {FASTAPI_BACKEND_URL}. Ensure it is running.")
+            # Save assistant message to state
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer,
+                "sources": sources
+            })
